@@ -4,7 +4,11 @@
 const boardUI = document.querySelector('.board');
 const restartBtn = document.querySelector('.restart');
 const winnerDisplay = document.querySelector('.winner-display');
-
+const newGameBtn = document.querySelector('.new-game');
+const playerModal = document.getElementById('player-modal');
+const startGameBtn = document.getElementById('start-game');
+const playerONameInput = document.getElementById('playerO-name');
+const playerXNameInput = document.getElementById('playerX-name');
 
 // IIFE -> single object - MODEL
 const gameBoard = (() => {
@@ -87,9 +91,6 @@ const gameController = (() => {
 
     // Starts the game
     const start = () => {
-        playerX = createPlayer('Player X', 'X');
-        playerO = createPlayer('Player O', 'O');
-        
         gameOver = false;
         activePlayer = playerO;
 
@@ -97,6 +98,9 @@ const gameController = (() => {
         gameBoard.setBoard();
 
         updateBoardUI();
+        winnerDisplay.textContent = 'Game has started!';
+        newGameBtn.style.display = 'none';
+        restartBtn.style.display = 'block';
     };
 
     const updateBoardUI = () => {
@@ -143,8 +147,6 @@ const gameController = (() => {
         if (gameOver) {
             return;
         }
-
-        console.log(e.target);
 
         if (!e.target.classList.contains('column')) {
             return;
@@ -303,6 +305,29 @@ const gameController = (() => {
         start();
     };
 
+    const isGameOver = () => {
+        if (gameOver) {
+            return true;
+        } else {
+            return false;
+        }
+    };
+
+    const askPlayer = () => {
+        playerModal.style.display = 'flex';
+    };
+
+    const handleNewGame = (e) => {
+        if (playerONameInput.value === '' || playerXNameInput.value === '') {
+            return;
+        }
+
+        playerO = createPlayer(playerONameInput.value, 'O');
+        playerX = createPlayer(playerXNameInput.value, 'X');
+        playerModal.style.display = 'none';
+        start();
+    };
+
     return {
         start,
         getWinner,
@@ -310,11 +335,29 @@ const gameController = (() => {
         setPlayerMove,
         restart,
         handleClick,
-        updateBoardUI
+        updateBoardUI,
+        isGameOver,
+        askPlayer,
+        handleNewGame
     };
 })();
 
 // Had to move them outside since as per gemini, it would cause recursion bugs
 boardUI.addEventListener('click', gameController.handleClick);
+
+newGameBtn.addEventListener('click', gameController.askPlayer);
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        startGameBtn.click();
+    }
+});
+
 restartBtn.addEventListener('click', gameController.restart);
-gameController.start();
+
+startGameBtn.addEventListener('click', gameController.handleNewGame);
+
+if (gameController.isGameOver()) {
+    newGameBtn.style.display = 'block';
+    winnerDisplay.textContent = 'No active game';
+}

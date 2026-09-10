@@ -8,10 +8,27 @@
     <script type="module" src="main.js"></script>
 </head>
 <body>
+    <div id="player-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Enter Player Details</h2>
+            
+            <div class="player-input-group">
+            <h3>Player 1 (O)</h3>
+            <input type="text" id="playerO-name" autocomplete="off">
+            </div>
+
+            <div class="player-input-group">
+            <h3>Player 2 (X)</h3>
+            <input type="text" id="playerX-name" autocomplete="off">
+            </div>
+
+            <button id="start-game" class="modal-btn">Start Game</button>
+        </div>
+    </div>
     <div class="board"></div>
     <div class="winner-display"></div>
     <div class="controls">
-        <button type="button" class="start-game">Start Game</button>
+        <button type="button" class="new-game">New Game</button>
         <button type="button" class="restart">Restart Game</button>
     </div>
 </body>
