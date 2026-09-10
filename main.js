@@ -1,38 +1,54 @@
-/* 
-the game has a board with 3 rows and 3 columns
-has 2 players, playerX and playerO
-each player takes turn
-the board is marked with X or O
-a player has a name and a marker
-name is playerX or playerO and marker is X or O
-the game has a winner or a tie
-win means if 3 lines matched vertical, horizontal or diagonal
-tie if all boards are filled but no winner
-*/
+// TODO -> I haven't fixed types yet. Some are numbers and some are strings
+// The tie also has a bug since I only account moveCounter. Must stop the click event
+
+const boardUI = document.querySelector('.board');
+const restartBtn = document.querySelector('.restart');
+const winnerDisplay = document.querySelector('.winner-display');
+
 
 // IIFE -> single object - MODEL
 const gameBoard = (() => {
     let board = [];
 
     // Builds the 2D array as the board
-    for (let row = 0; row < 3; row++) {
-        board.push([]);
-        for (let col = 0; col < 3; col++) {
-            board[row].push('');
+    const setBoard = () => {
+        for (let row = 0; row < 3; row++) {
+            board.push([]);
+            for (let col = 0; col < 3; col++) {
+                board[row].push('');
+            }
         }
-    }
+    };
 
     // Returns the current state of the board
     const getBoard = () => {
         // Returns a reference to the original array - unsafe
-        return board;
+        // const t = [...board]; -> spread operator as creates a shallow copy only
+        // console.log(t);
+        // console.log(board);
+        // console.log(t === board); -> false
+        // console.log(t[0] === board[0]); -> true -> This was the unsafe part since board is a 2D array
+        // only the outer array is shallow copied, the inner array are 
+        // still reference to the arrays inside the original outer array
+        // return board;
+        const deepCopyOfBoard = board.map((innerArray) => {
+            return [...innerArray];
+        });
+
+        // console.log(deepCopyOfBoard[0] === board[0]); -> false -> now it's a true new copy
+        
+        return deepCopyOfBoard;
     };
 
     // markPosition is an object mapping row and col value to the board
     const markBoard = (playerMarker, markPosition) => {
+        // I didn't put any guard
         board[markPosition.row][markPosition.col] = playerMarker;
     };
 
+    // I originally thought this is useless
+    // but calling this ultimately only does one thing that can't be changed by
+    // something from the outside
     const clearBoard = () => {
         board = [];
     };
@@ -40,7 +56,8 @@ const gameBoard = (() => {
     return {
         markBoard,
         getBoard,
-        clearBoard
+        clearBoard,
+        setBoard
     };
 
 })();
@@ -75,13 +92,41 @@ const gameController = (() => {
         
         gameOver = false;
         activePlayer = playerO;
-        gameBoard.clearBoard();
 
-        // Builds the board model into the view updateBoardUI
+        // Builds the board state
+        gameBoard.setBoard();
 
-        // Adds click listener to the board or to every column addListener()
-        // When a click happens, a move was made, call setPlayerMove
-        // also switchPlayer()
+        updateBoardUI();
+    };
+
+    const updateBoardUI = () => {
+        // Not sure if this is right, but it works6 ahahah
+        boardUI.innerHTML = '';
+
+        const board = gameBoard.getBoard();
+
+        const rowFragment = document.createDocumentFragment();
+
+        for (let r = 0; r < board.length; r++) {
+            const row = document.createElement('div');
+            row.id = r;
+            row.classList.add('row');
+            row.dataset.row = `row-${r}`;
+
+            for (let c = 0; c < board[r].length; c++) {
+                 const column = document.createElement('div');
+                 column.id = c;
+                 column.classList.add('column');
+                 column.dataset.column = `column-${c}`;
+                 column.textContent = board[r][c];
+
+                 row.appendChild(column);
+            }
+
+            rowFragment.appendChild(row);
+        }
+
+        boardUI.appendChild(rowFragment);
     };
 
     // Private factory function
@@ -92,21 +137,96 @@ const gameController = (() => {
         };
     };
 
-    const addListener = () => {
-        
-    };
+    // I deleted my add and remove listener since they are useless
 
-    const removeListener = () => {
+    const handleClick = (e) => {
+        if (gameOver) {
+            return;
+        }
 
+        console.log(e.target);
+
+        if (!e.target.classList.contains('column')) {
+            return;
+        }
+
+        setPlayerMove(e);
     };
 
     // Called when a click happens
-    const setPlayerMove = () => {
-        // finds the position marked by the player [row][col]
-        // set markPosition to have row and col as the position of the move
-        // gameBoard.markBoard(activePlayer.marker, markPosition);
-        // switchPlayer() -> switch the next activePlayer
-        // moveCounter++;
+    const setPlayerMove = (e) => {
+
+        const row = e.target.closest('.row');
+        const col = e.target;
+
+        if (!col) {
+            return;
+        }
+
+        if (col.textContent !== '') {
+            return;
+        }
+
+        const markPosition = {
+            row: Number(row.id),
+            col: Number(col.id)
+        };
+        
+        moveCounter++;
+        gameBoard.markBoard(activePlayer.marker, markPosition);
+
+        const gameWinner = getWinner(activePlayer.marker);
+        const hasTie = getTie();
+
+        if (gameWinner.hasWinner) {
+            gameOver = true;
+            updateBoardUI();
+            showWinner(activePlayer, gameWinner.winningPosition);
+
+            return;
+        }
+
+        if (hasTie) {
+            gameOver = true;
+            updateBoardUI();
+            showTie();
+
+            return;
+        }
+        
+        switchPlayer();
+        
+        updateBoardUI();
+    };
+
+    const showWinner = (winningPlayer, winPosition) => {
+        winnerDisplay.innerHTML = '';
+
+        const message = document.createElement('p');
+        
+        message.textContent = `${winningPlayer.name} won the game!`;
+
+        winnerDisplay.appendChild(message);
+        
+        for (let r = 0; r < winPosition.length; r++) {
+            const cell = winPosition[r];
+            const rowNum = cell[0];
+            const columnNum = cell[1];
+
+            const rowUI = document.querySelector(`[data-row=row-${rowNum}]`);
+            const columnUI = rowUI.querySelector(`[data-column=column-${columnNum}]`);
+
+            columnUI.classList.add(`winner-${winningPlayer.marker.toLowerCase()}`);
+        }
+    };
+
+    const showTie = () => {
+        winnerDisplay.innerHTML = '';
+
+        const message = document.createElement('p');
+
+        message.textContent = 'It was a TIE!';
+        winnerDisplay.appendChild(message);
     };
 
     // Called when a click happens
@@ -165,8 +285,8 @@ const gameController = (() => {
 
     const getTie = () => {
         let hasTie = false;
-        // If there is no winner and there are already 9 moves, it's a tie
-        if (!getWinner.hasWinner && moveCounter === 9) {
+        // If there are already 9 moves, it's a tie
+        if (moveCounter === 9) {
             hasTie = true;
         }
 
@@ -177,41 +297,24 @@ const gameController = (() => {
     const restart = () => {
         gameOver = true;
         activePlayer = null;
-        removeListener();
+        moveCounter = 0;
+        gameBoard.clearBoard();
+        winnerDisplay.innerHTML = '';
         start();
     };
 
     return {
         start,
-        addListener,
-        removeListener,
         getWinner,
         getTie,
         setPlayerMove,
-        restart
+        restart,
+        handleClick,
+        updateBoardUI
     };
 })();
 
-function updateBoardUI(boardState) {
-    // renders the UI
-    // takes the game board model and render as the view
-}
-
-// gameBoard.markBoard('X', {row: 0, col: 0});
-// gameBoard.markBoard('O', {row: 0, col: 2});
-// gameBoard.markBoard('X', {row: 1, col: 0});
-// gameBoard.markBoard('O', {row: 2, col: 0});
-// gameBoard.markBoard('X', {row: 1, col: 1});
-gameBoard.markBoard('O', {row: 0, col: 2});
-gameBoard.markBoard('X', {row: 1, col: 0});
-gameBoard.markBoard('X', {row: 0, col: 0});
-gameBoard.markBoard('O', {row: 2, col: 0});
-gameBoard.markBoard('X', {row: 1, col: 1});
-gameBoard.markBoard('O', {row: 1, col: 2});
-gameBoard.markBoard('X', {row: 2, col: 2});
-gameBoard.markBoard('O', {row: 2, col: 1});
-gameBoard.markBoard('X', {row: 0, col: 1});
-
-console.log(gameController.getWinner('X'));
-console.log(gameController.getTie());
-console.log(gameBoard.getBoard());
+// Had to move them outside since as per gemini, it would cause recursion bugs
+boardUI.addEventListener('click', gameController.handleClick);
+restartBtn.addEventListener('click', gameController.restart);
+gameController.start();
