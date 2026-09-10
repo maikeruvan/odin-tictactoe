@@ -348,7 +348,7 @@ boardUI.addEventListener('click', gameController.handleClick);
 newGameBtn.addEventListener('click', gameController.askPlayer);
 
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && document.activeElement !== startGameBtn) {
         startGameBtn.click();
     }
 });
